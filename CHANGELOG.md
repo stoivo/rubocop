@@ -2,6 +2,9 @@
 
 ## master (unreleased)
 
+### New features
+* Layout/AlignHash support negated options. ([@stoivo][])
+
 ### Bug fixes
 
 * [#6623](https://github.com/rubocop-hq/rubocop/pull/6623): Fix heredoc detection in trailing comma. ([@palkan][])
@@ -3731,3 +3734,4 @@
 [@amatsuda]: https://github.com/amatsuda
 [@Intrepidd]: https://github.com/Intrepidd
 [@Ruffeng]: https://github.com/Ruffeng
+[@stoivo]: https://github.com/stoivo

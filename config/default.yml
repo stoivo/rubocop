@@ -249,6 +249,9 @@ Layout/AlignHash:
     - key
     - separator
     - table
+    - not_key
+    - not_separator
+    - not_table
   # Alignment of entries using colon as separator. Valid values are:
   #
   # key - left alignment of keys
@@ -265,6 +268,9 @@ Layout/AlignHash:
     - key
     - separator
     - table
+    - not_key
+    - not_separator
+    - not_table
   # Select whether hashes that are the last argument in a method call should be
   # inspected? Valid values are:
   #

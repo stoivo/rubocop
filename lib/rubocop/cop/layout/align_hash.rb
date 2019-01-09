@@ -198,8 +198,10 @@ module RuboCop
           return if ignored_node?(node)
           return if node.pairs.empty? || node.single_line?
 
-          return unless alignment_for_hash_rockets.checkable_layout?(node) &&
-                        alignment_for_colons.checkable_layout?(node)
+          return unless alignment_for_hash_rockets
+                        .any? { |a| a.checkable_layout?(node) } &&
+                        alignment_for_colons
+                        .any? { |a| a.checkable_layout?(node) }
 
           check_pairs(node)
         end
@@ -229,14 +231,18 @@ module RuboCop
 
         def check_pairs(node)
           first_pair = node.pairs.first
-          self.column_deltas = alignment_for(first_pair)
-                               .deltas_for_first_pair(first_pair, node)
-          add_offense(first_pair) unless good_alignment?
-
+          if alignment_for(first_pair)
+             .map do |alignment|
+               good_alignment? alignment.deltas_for_first_pair(first_pair, node)
+             end.none?
+            add_offense(first_pair)
+          end
           node.children.each do |current|
-            self.column_deltas = alignment_for(current)
-                                 .deltas(first_pair, current)
-            add_offense(current) unless good_alignment?
+            next if alignment_for(current).any? do |alignment|
+              good_alignment? alignment.deltas(first_pair, current)
+            end
+
+            add_offense(current)
           end
         end
 
@@ -289,11 +295,15 @@ module RuboCop
         end
 
         def new_alignment(key)
-          case cop_config[key]
-          when 'key'       then KeyAlignment.new
-          when 'table'     then TableAlignment.new
-          when 'separator' then SeparatorAlignment.new
-          else raise "Unknown #{key}: #{cop_config[key]}"
+          {
+            'key' => [KeyAlignment.new],
+            'table' => [TableAlignment.new],
+            'separator' => [SeparatorAlignment.new],
+            'not_key' => [TableAlignment.new, SeparatorAlignment.new],
+            'not_table' => [KeyAlignment.new, SeparatorAlignment.new],
+            'not_separator' => [KeyAlignment.new, TableAlignment.new]
+          }.fetch(cop_config[key]) do
+            raise "Unknown #{key}: #{cop_config[key]}"
           end
         end
 
@@ -306,7 +316,8 @@ module RuboCop
           end
         end
 
-        def good_alignment?
+        def good_alignment?(column_deltas)
+          self.column_deltas = column_deltas
           column_deltas.values.all?(&:zero?)
         end
       end

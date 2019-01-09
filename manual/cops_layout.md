@@ -287,8 +287,8 @@ do_something({foo: 1,
 
 Name | Default value | Configurable values
 --- | --- | ---
-EnforcedHashRocketStyle | `key` | `key`, `separator`, `table`
-EnforcedColonStyle | `key` | `key`, `separator`, `table`
+EnforcedHashRocketStyle | `key` | `key`, `separator`, `table`, `not_key`, `not_separator`, `not_table`
+EnforcedColonStyle | `key` | `key`, `separator`, `table`, `not_key`, `not_separator`, `not_table`
 EnforcedLastArgumentHashStyle | `always_inspect` | `always_inspect`, `always_ignore`, `ignore_implicit`, `ignore_explicit`
 
 ## Layout/AlignParameters
