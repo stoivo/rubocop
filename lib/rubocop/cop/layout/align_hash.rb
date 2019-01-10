@@ -210,20 +210,21 @@ module RuboCop
           # We can't use the instance variable inside the lambda. That would
           # just give each lambda the same reference and they would all get the
           # last value of each. A local variable fixes the problem.
-          key_delta = column_deltas[:key] || 0
+          delta = least_offended_column_deltas[node]
 
           if !node.value
-            correct_no_value(key_delta, node.source_range)
+            correct_no_value(delta[:key] || 0, node.source_range)
           else
-            correct_key_value(key_delta, node.key.source_range,
+            correct_key_value(delta, node.key.source_range,
                               node.value.source_range,
                               node.loc.operator)
           end
         end
 
-        private
-
+        attr_accessor :offences_by
         attr_accessor :column_deltas
+
+        private
 
         def double_splat?(node)
           node.children.last.is_a?(Symbol)
@@ -231,19 +232,37 @@ module RuboCop
 
         def check_pairs(node)
           first_pair = node.pairs.first
-          if alignment_for(first_pair)
-             .map do |alignment|
-               good_alignment? alignment.deltas_for_first_pair(first_pair, node)
-             end.none?
-            add_offense(first_pair)
-          end
-          node.children.each do |current|
-            next if alignment_for(current).any? do |alignment|
-              good_alignment? alignment.deltas(first_pair, current)
-            end
+          self.offences_by = {}
+          self.column_deltas = Hash.new { |hash, key| hash[key] = {} }
 
-            add_offense(current)
+          alignment_for(first_pair).each do |alignment|
+            delta = alignment.deltas_for_first_pair(first_pair, node)
+            check_delta delta, node: first_pair, alignment: alignment
           end
+
+          node.children.each do |current|
+            alignment_for(current).each do |alignment|
+              delta = alignment.deltas(first_pair, current)
+              check_delta delta, node: current, alignment: alignment
+            end
+          end
+
+          add_offences
+        end
+
+        def add_offences
+          _format, offences = offences_by.min_by { |_, v| v.length }
+          (offences || []).each do |offence|
+            add_offense offence
+          end
+        end
+
+        def check_delta(delta, node:, alignment:)
+          offences_by[alignment.class] ||= []
+          return if good_alignment? delta
+
+          column_deltas[alignment.class][node] = delta
+          offences_by[alignment.class].push(node)
         end
 
         def ignore_hash_argument?(node)
@@ -273,16 +292,22 @@ module RuboCop
             new_alignment('EnforcedColonStyle')
         end
 
+        def least_offended_column_deltas
+          least_offences_format, = offences_by.min_by { |_, v| v.length }
+          column_deltas[least_offences_format]
+        end
+
         def correct_no_value(key_delta, key)
           ->(corrector) { adjust(corrector, key_delta, key) }
         end
 
-        def correct_key_value(key_delta, key, value, separator)
+        def correct_key_value(delta, key, value, separator)
           # We can't use the instance variable inside the lambda. That would
           # just give each lambda the same reference and they would all get the
           # last value of each. Some local variables fix the problem.
-          separator_delta = column_deltas[:separator] || 0
-          value_delta     = column_deltas[:value] || 0
+          separator_delta = delta[:separator] || 0
+          value_delta     = delta[:value]     || 0
+          key_delta       = delta[:key]       || 0
 
           key_column = key.column
           key_delta = -key_column if key_delta < -key_column
@@ -317,7 +342,6 @@ module RuboCop
         end
 
         def good_alignment?(column_deltas)
-          self.column_deltas = column_deltas
           column_deltas.values.all?(&:zero?)
         end
       end
